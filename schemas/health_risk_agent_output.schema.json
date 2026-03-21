@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HealthRiskAgentOutput",
+  "type": "object",
+  "required": [
+    "risk_level",
+    "risk_reasons",
+    "urgent_red_flags",
+    "escalation_guidance",
+    "uncertainty_statement"
+  ],
+  "properties": {
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "moderate", "high", "urgent"]
+    },
+    "risk_reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "urgent_red_flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "escalation_guidance": { "type": "string" },
+    "uncertainty_statement": { "type": "string" }
+  }
+}

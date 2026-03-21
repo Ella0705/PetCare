@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FeedingGuidanceAgentOutput",
+  "type": "object",
+  "required": ["feeding_advice", "hydration_advice", "avoid_list", "monitoring_tips"],
+  "properties": {
+    "feeding_advice": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "hydration_advice": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "avoid_list": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "monitoring_tips": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

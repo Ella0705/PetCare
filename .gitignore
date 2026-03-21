@@ -1,0 +1,48 @@
+# --- 环境变量与密钥（切勿提交） ---
+.env
+.env.*
+!.env.example
+
+# --- macOS ---
+.DS_Store
+
+# --- 编辑器 / IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- 后端 Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- 后端上传目录（运行 uvicorn 时在 backend/ 下生成） ---
+uploads/
+backend/uploads/
+
+# --- 前端 Next.js / Node ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/*.tsbuildinfo
+
+# --- 日志与临时文件 ---
+*.log
+tmp/
+temp/

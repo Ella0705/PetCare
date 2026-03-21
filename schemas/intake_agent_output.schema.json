@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IntakeAgentOutput",
+  "type": "object",
+  "required": ["case_summary", "normalized_symptoms", "red_flag_keywords", "safety_disclaimer"],
+  "properties": {
+    "case_summary": { "type": "string" },
+    "normalized_symptoms": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "red_flag_keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "safety_disclaimer": { "type": "string" }
+  }
+}
