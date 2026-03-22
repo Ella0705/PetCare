@@ -1,133 +1,190 @@
-# PetCare AI (Hackathon MVP)
+# PetCare AI
 
-PetCare AI is a multi-agent pet wellness assistant MVP.
+Multi-agent **pet wellness assistant** MVP: owners submit symptoms, pet metadata, and optional photos; the app returns a **structured report** with risk level, veterinary escalation guidance, feeding/hydration tips, and explicit **non-diagnostic** disclaimers.
 
-It accepts:
-- one or more pet photos
-- owner symptom descriptions
-- pet metadata (species, age, weight, sex, neutered status)
+**中文概要：** 基于 **FastAPI + Next.js** 的全栈演示项目；四个 Agent（分诊、视觉、风险、喂养）由编排器串联，支持 **OpenAI 兼容 API**（可选），无密钥时自动回退规则逻辑。前端默认通过 **Next 服务端代理** 调用后端，避免浏览器跨域问题。
 
-It outputs:
-- structured pet health report
-- feeding and hydration guidance
-- risk level
-- escalation guidance for veterinary follow-up
+---
 
-## Important Safety Notice
+## Safety notice
 
 - PetCare AI is **not** a diagnosis or treatment tool.
-- Outputs are uncertain and may be incomplete.
-- If urgent red flags appear (breathing difficulty, seizure, collapse, blood, persistent vomiting/diarrhea), seek veterinary care immediately.
+- Outputs may be wrong, incomplete, or uncertain.
+- **Emergencies** (trouble breathing, seizure, collapse, severe bleeding, non-stop vomiting/diarrhea): seek **immediate** veterinary care.
+
+---
+
+## Features
+
+| Area | Behavior |
+|------|----------|
+| **Intake** | Normalizes free-text symptoms; surfaces possible urgent keywords (LLM + JSON when API key set). |
+| **Vision** | Multimodal review of uploads (base64 → vision-capable model); uncertainty notes when images are missing or unclear. |
+| **Health risk** | Combines metadata + intake + vision; **model suggestion merged with rule-based floor** (more conservative level wins). |
+| **Feeding** | General husbandry bullets only — no prescriptions or drug advice. |
+| **Resilience** | No `OPENAI_API_KEY` → each agent falls back to built-in rules / placeholders. |
+| **Frontend transport** | Browser calls same-origin `POST /api/report`; Next.js forwards to FastAPI (`BACKEND_URL`). |
+
+---
+
+## Tech stack
+
+- **Backend:** Python 3, FastAPI, Uvicorn, Pydantic, `openai` (async), `pydantic-settings`
+- **Frontend:** Next.js (App Router), TypeScript
+- **Contracts:** Pydantic models under `backend/app/schemas/`; JSON Schema mirrors in `schemas/`
+
+---
 
 ## Architecture
 
-The backend uses FastAPI with a clear orchestrator and four agents:
+Orchestration (async):
 
-1. **Intake Agent**
-   - normalizes owner symptom text
-   - extracts potential red-flag keywords
-2. **Vision Agent**
-   - analyzes uploaded images (placeholder logic)
-   - emits uncertainty notes
-3. **Health Risk Agent**
-   - combines metadata + intake + vision
-   - computes risk level and escalation guidance
-4. **Feeding Guidance Agent**
-   - returns feeding/hydration advice, avoid list, monitoring tips
-
-Orchestration flow:
-
-`Intake -> Vision -> Health Risk -> Feeding Guidance -> Final Report`
-
-## Project Structure
-
+```text
+Intake → Vision → Health Risk → Feeding Guidance → FinalPetHealthReport
 ```
+
+- **OpenAI-compatible** Chat Completions with `response_format: json_object` for text agents; vision agent uses multimodal messages.
+- CORS on FastAPI allows local Next dev origins (`localhost` / `127.0.0.1` on ports 3000–3001); `allow_credentials` is **false** (compatible with strict browsers).
+
+---
+
+## Repository layout
+
+```text
 PetCare-AI/
   backend/
     app/
-      agents/
-      schemas/
+      agents/           # Intake, Vision, HealthRisk, FeedingGuidance
+      llm/              # OpenAI JSON helpers (text + vision)
+      schemas/          # Pydantic I/O models
+      settings.py       # env-driven config
       orchestrator.py
-      main.py
-    uploads/
+      main.py           # FastAPI app, CORS, /health, /api/report
+    .env.example
     requirements.txt
+    uploads/            # created at runtime (gitignored)
   frontend/
     app/
+      api/report/       # Route handler: proxy to FastAPI
       page.tsx
       report/page.tsx
-    lib/
-    package.json
-  schemas/
-    *_agent_output.schema.json
+    lib/api.ts
+    .env.example
+  schemas/              # *_agent_output.schema.json
   README.md
 ```
 
-## Backend Setup (FastAPI)
+---
+
+## Prerequisites
+
+- Python **3.10+** recommended
+- **Node.js** + npm (for the frontend)
+- Optional: **OpenAI API key** (or compatible gateway) for full LLM/vision behavior
+
+---
+
+## Quick start (local)
+
+Use **two terminals**: backend always on **:8000**, frontend on **:3000**.
+
+### 1. Backend
 
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env   # 然后填入 OPENAI_API_KEY
+cp .env.example .env               # add OPENAI_API_KEY if you want LLM mode
 uvicorn app.main:app --reload --port 8000
 ```
 
-LLM / 视觉：在 `backend/.env` 设置 `OPENAI_API_KEY`（可选 `OPENAI_BASE_URL`、`PETCARE_TEXT_MODEL`、`PETCARE_VISION_MODEL`）。  
-未配置密钥时，各 Agent 自动回退到内置规则占位逻辑，便于本地无密钥调试。
-
-Backend health check:
+Smoke test:
 
 ```bash
 curl http://127.0.0.1:8000/health
+# curl http://127.0.0.1:8000/       # service JSON + doc links
 ```
 
-## Frontend Setup (Next.js)
+### 2. Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # 可选；默认已指向 http://127.0.0.1:8000
+cp .env.example .env.local         # optional; defaults shown below
 npm run dev
 ```
 
-Open:
+Open **http://localhost:3000** → fill the form → **Generate Report** → report page (data stored in `sessionStorage` for the session).
 
-- http://localhost:3000
+---
 
-默认前端通过 **同源** `POST /api/report` 由 Next 服务端 **代理** 到 FastAPI，避免浏览器跨域问题。  
-`frontend/.env.local` 中可设置 `BACKEND_URL`（转发目标）。
+## Environment variables
 
-若要让浏览器 **直连** 后端，再设置 `NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000`（需后端 CORS 已包含你的前端来源）。
+### `backend/.env` (see `backend/.env.example`)
 
-## Demo Flow
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | No* | Enables LLM + vision paths; omit to use rule fallback only. |
+| `OPENAI_BASE_URL` | No | Compatible API base (proxies, Azure-style endpoints). |
+| `PETCARE_TEXT_MODEL` | No | Default `gpt-4o-mini`. |
+| `PETCARE_VISION_MODEL` | No | Default `gpt-4o-mini` (must support images). |
 
-1. Open the intake form on the frontend.
-2. Enter pet metadata and symptom description.
-3. Upload one or more photos.
-4. Submit to trigger backend orchestrator.
-5. View final report page with:
-   - risk level
-   - escalation recommendation
-   - feeding/hydration guidance
-   - uncertainty and non-diagnostic notices
+\*Required only if you want model-backed agents.
 
-## JSON Schemas
+### `frontend/.env.local` (see `frontend/.env.example`)
 
-Intermediate output schemas are available in `schemas/`:
+| Variable | Description |
+|----------|-------------|
+| `BACKEND_URL` | Where Next proxies `POST /api/report` (default `http://127.0.0.1:8000`). |
+| `NEXT_PUBLIC_API_BASE` | If set, the **browser** calls this base URL directly instead of the proxy; ensure FastAPI CORS includes your frontend origin. |
+
+**Never commit** real `.env` files; only `.env.example` belongs in git.
+
+---
+
+## HTTP API (FastAPI)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Service info + links to docs |
+| GET | `/health` | Liveness |
+| POST | `/api/report` | `multipart/form-data`: `owner_symptoms`, `species`, `age_years`, `weight_kg`, `sex`, `neutered`, optional repeated `images` |
+
+Interactive docs: **http://127.0.0.1:8000/docs**
+
+---
+
+## JSON schemas
+
+Reference schemas for agent outputs live in `schemas/`:
 
 - `intake_agent_output.schema.json`
 - `vision_agent_output.schema.json`
 - `health_risk_agent_output.schema.json`
 - `feeding_guidance_agent_output.schema.json`
 
-## LLM Integrations
+---
 
-Agents call an **OpenAI-compatible** Chat Completions API (default OpenAI) when `OPENAI_API_KEY` is set:
+## Troubleshooting
 
-- **Intake** — symptom normalization + red-flag hints (JSON)
-- **Vision** — multimodal image review (JSON; base64 data URLs)
-- **Health risk** — narrative + level suggestion, merged with **rule-based floor** (`app/agents/health_risk_agent.py`)
-- **Feeding** — conservative husbandry bullets (JSON)
+| Issue | What to check |
+|--------|----------------|
+| **Failed to fetch** | Backend running on 8000; restart Next after `.env.local` changes; try default proxy (clear `NEXT_PUBLIC_API_BASE`). |
+| **CORS errors** when using direct API | Use listed dev origins or add yours in `backend/app/main.py` (`CORSMiddleware`). |
+| **404 on `/`** (backend) | Use `/health` or `/docs`; root route returns JSON service card. |
 
-Without an API key, behavior falls back to the original rule/placeholder implementations.
+---
+
+## License
+
+No license file is bundled yet; add one (e.g. MIT) if you open-source publicly.
+
+---
+
+## 中文：本地怎么跑
+
+1. **终端 A**：`cd backend` → 虚拟环境 → `pip install -r requirements.txt` → 配置 `.env`（可选填 Key）→ `uvicorn app.main:app --reload --port 8000`。  
+2. **终端 B**：`cd frontend` → `npm install` → `npm run dev`。  
+3. 浏览器打开 **http://localhost:3000** 提交表单。  
+4. 密钥只放在 **`backend/.env`**，不要提交到 Git；前端代理地址用 **`frontend/.env.local`** 里的 `BACKEND_URL` 即可。
