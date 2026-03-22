@@ -13,11 +13,11 @@ class PetCareOrchestrator:
         self.health_risk_agent = HealthRiskAgent()
         self.feeding_guidance_agent = FeedingGuidanceAgent()
 
-    def run(self, payload: IntakeInput) -> FinalPetHealthReport:
-        intake_output = self.intake_agent.run(payload)
-        vision_output = self.vision_agent.run(payload.image_paths)
-        risk_output = self.health_risk_agent.run(payload.metadata, intake_output, vision_output)
-        feeding_output = self.feeding_guidance_agent.run(payload.metadata, risk_output)
+    async def run(self, payload: IntakeInput) -> FinalPetHealthReport:
+        intake_output = await self.intake_agent.run(payload)
+        vision_output = await self.vision_agent.run(payload.image_paths)
+        risk_output = await self.health_risk_agent.run(payload.metadata, intake_output, vision_output)
+        feeding_output = await self.feeding_guidance_agent.run(payload.metadata, risk_output)
 
         return FinalPetHealthReport(
             metadata=payload.metadata,

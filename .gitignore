@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # --- macOS ---
 .DS_Store
@@ -46,3 +48,6 @@ frontend/*.tsbuildinfo
 *.log
 tmp/
 temp/
+
+# 仓库根目录临时测试图（勿提交；若要在根目录放正式素材可删本行）
+/*.webp

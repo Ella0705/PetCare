@@ -15,13 +15,35 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="PetCare AI MVP", version="0.1.0")
 orchestrator = PetCareOrchestrator()
 
+# 勿同时使用 allow_origins=["*"] 与 allow_credentials=True（浏览器会拒绝跨域响应）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root() -> dict:
+    """根路径说明（浏览器打开 8000 端口时不再 404）。"""
+    return {
+        "service": app.title,
+        "version": app.version,
+        "message": "PetCare AI API is running. Use the Next.js frontend at http://localhost:3000 for the UI.",
+        "endpoints": {
+            "health": "/health",
+            "generate_report": "POST /api/report (multipart form)",
+            "openapi_docs": "/docs",
+            "openapi_redoc": "/redoc",
+        },
+    }
 
 
 @app.get("/health")
@@ -58,4 +80,4 @@ async def generate_report(
         ),
         image_paths=saved_paths,
     )
-    return orchestrator.run(payload)
+    return await orchestrator.run(payload)

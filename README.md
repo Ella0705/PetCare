@@ -69,8 +69,12 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # 然后填入 OPENAI_API_KEY
 uvicorn app.main:app --reload --port 8000
 ```
+
+LLM / 视觉：在 `backend/.env` 设置 `OPENAI_API_KEY`（可选 `OPENAI_BASE_URL`、`PETCARE_TEXT_MODEL`、`PETCARE_VISION_MODEL`）。  
+未配置密钥时，各 Agent 自动回退到内置规则占位逻辑，便于本地无密钥调试。
 
 Backend health check:
 
@@ -83,6 +87,7 @@ curl http://127.0.0.1:8000/health
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local   # 可选；默认已指向 http://127.0.0.1:8000
 npm run dev
 ```
 
@@ -90,11 +95,10 @@ Open:
 
 - http://localhost:3000
 
-Optional env:
+默认前端通过 **同源** `POST /api/report` 由 Next 服务端 **代理** 到 FastAPI，避免浏览器跨域问题。  
+`frontend/.env.local` 中可设置 `BACKEND_URL`（转发目标）。
 
-```bash
-NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
-```
+若要让浏览器 **直连** 后端，再设置 `NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000`（需后端 CORS 已包含你的前端来源）。
 
 ## Demo Flow
 
@@ -117,11 +121,13 @@ Intermediate output schemas are available in `schemas/`:
 - `health_risk_agent_output.schema.json`
 - `feeding_guidance_agent_output.schema.json`
 
-## Placeholder Integrations
+## LLM Integrations
 
-This MVP intentionally includes placeholders for:
-- LLM reasoning/extraction calls
-- vision model inference
-- policy guardrails beyond basic rules
+Agents call an **OpenAI-compatible** Chat Completions API (default OpenAI) when `OPENAI_API_KEY` is set:
 
-These placeholders are marked in agent code and can be replaced with production services later.
+- **Intake** — symptom normalization + red-flag hints (JSON)
+- **Vision** — multimodal image review (JSON; base64 data URLs)
+- **Health risk** — narrative + level suggestion, merged with **rule-based floor** (`app/agents/health_risk_agent.py`)
+- **Feeding** — conservative husbandry bullets (JSON)
+
+Without an API key, behavior falls back to the original rule/placeholder implementations.
